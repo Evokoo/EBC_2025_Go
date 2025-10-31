@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -48,7 +49,10 @@ func getQuest() string {
 }
 func createFolder(day string) {
 	//Make the folder
-	os.Mkdir(day, 0755)
+	err := os.Mkdir(day, 0755)
+	if err != nil {
+		log.Fatalf("Failed to create quest folder: %v", err)
+	}
 
 	dir, err := os.Getwd()
 	if err != nil {
@@ -62,11 +66,31 @@ func createFolder(day string) {
 	if err != nil {
 		log.Fatalf("Failed to change directory: %v", err)
 	}
+
+	//Create data folder
+	err = os.Mkdir("inputs", 0755)
+	if err != nil {
+		log.Fatalf("Failed to create data folder: %v", err)
+	}
+
+	dir, err = os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get current working directory: %v", err)
+	} else {
+		fmt.Printf("%s folder created at %s\n", "inputs", dir)
+	}
+
 }
 func createFiles(files []File) {
 	for _, context := range files {
+		filename := context.fileName
+
+		if strings.HasSuffix(filename, ".txt") {
+			filename = filepath.Join("inputs", filename)
+		}
+
 		//Create file
-		file, err := os.Create(context.fileName)
+		file, err := os.Create(filename)
 		if err != nil {
 			log.Fatalf("Failed to create file: %v", err)
 		}
@@ -75,10 +99,10 @@ func createFiles(files []File) {
 		if err != nil {
 			log.Fatalf("Failed to write to file: %v", err)
 		}
-		fmt.Println(context.fileName, "created")
+		fmt.Println(filename, "created")
 
 		if context.open {
-			openFile(context.fileName)
+			openFile(filename)
 		}
 
 		file.Close()
