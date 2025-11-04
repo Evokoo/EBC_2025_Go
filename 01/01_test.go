@@ -11,16 +11,16 @@ import (
 type Test struct {
 	file   string
 	part   int
-	target int
+	target string
 }
 
 var tests = []Test{
-	{part: 1, file: "example_I.txt", target: 5},
-	{part: 1, file: "input_I.txt", target: 1306},
-	{part: 2, file: "example_II.txt", target: 28},
-	{part: 2, file: "input_II.txt", target: 5636},
-	{part: 3, file: "example_III.txt", target: 30},
-	{part: 3, file: "input_III.txt", target: 27983},
+	{part: 1, file: "inputs/example_I.txt", target: "Fyrryn"},
+	{part: 1, file: "inputs/input_I.txt", target: "Draithacris"},
+	{part: 2, file: "inputs/example_II.txt", target: "Elarzris"},
+	{part: 2, file: "inputs/input_II.txt", target: "Orysaral"},
+	{part: 3, file: "inputs/example_III.txt", target: "Drakzyph"},
+	{part: 3, file: "inputs/input_III.txt", target: "Bryntal"},
 }
 
 var _ = Describe("EBC 2025 - Quest 01", func() {
