@@ -48,7 +48,6 @@ func (p *Pair) Multiply(a Pair) {
 func (p *Pair) Divide(a Pair) {
 	x1, y1 := p[0], p[1]
 	x2, y2 := a[0], a[1]
-
 	(*p)[0] = x1 / x2
 	(*p)[1] = y1 / y2
 }
@@ -82,7 +81,7 @@ func SimpleLoop(file string) Pair {
 // PART II & III
 // ========================
 
-func PlotPoints(file string, size int) Pair {
+func CountPoints(file string, size int) Pair {
 	a := ParseInput(file)
 	b := NewPair(a[0]+1000, a[1]+1000)
 	d := NewPair(100000, 100000)
@@ -106,10 +105,8 @@ func PlotPoints(file string, size int) Pair {
 					continue row
 				}
 			}
-
 			count++
 		}
 	}
-
 	return NewPair(count, 0)
 }

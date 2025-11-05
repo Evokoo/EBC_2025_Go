@@ -11,7 +11,7 @@ func Solve(file string, part int) Pair {
 			size = 1001
 		}
 
-		return PlotPoints(file, size)
+		return CountPoints(file, size)
 	}
 
 	return NewPair(-1, -1)
