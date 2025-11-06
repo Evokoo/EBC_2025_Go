@@ -1,7 +1,7 @@
 package quest03
 
 func Solve(file string, part int) int {
-	boxes := ParseInput(file)
+	boxes := ParseInput(file, part)
 
 	switch part {
 	case 1:

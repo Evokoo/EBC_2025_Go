@@ -14,15 +14,15 @@ import (
 
 func I(boxes []int) int {
 	total := 0
-	seen := make(map[int]struct{})
+	seen := make(Set)
 
 	for _, box := range boxes {
-		if _, found := seen[box]; found {
+		if seen.Has(box) {
 			continue
 		}
 
 		total += box
-		seen[box] = struct{}{}
+		seen.Add(box)
 	}
 
 	return total
@@ -33,16 +33,16 @@ func I(boxes []int) int {
 // ========================
 func II(boxes Boxes) int {
 	boxset := make(Boxes, 0, 20)
-	seen := make(map[int]struct{})
+	seen := make(Set)
 
 	for i := len(boxes) - 1; i >= 0; i-- {
 		box := boxes[i]
-		if _, found := seen[box]; found {
+		if seen.Has(box) {
 			continue
 		}
 
 		boxset = append(boxset, box)
-		seen[box] = struct{}{}
+		seen.Add(box)
 
 		if len(boxset) == 20 {
 			break
@@ -72,12 +72,25 @@ func III(boxes Boxes) int {
 }
 
 // ========================
+// SET
+// ========================
+type Set map[int]struct{}
+
+func (s *Set) Add(n int) {
+	(*s)[n] = struct{}{}
+}
+func (s *Set) Has(n int) bool {
+	_, found := (*s)[n]
+	return found
+}
+
+// ========================
 // PARSER
 // ========================
 
 type Boxes []int
 
-func ParseInput(file string) Boxes {
+func ParseInput(file string, part int) Boxes {
 	data := utils.ReadFile(file)
 	values := []int{}
 
@@ -86,9 +99,11 @@ func ParseInput(file string) Boxes {
 		values = append(values, n)
 	}
 
-	sort.Slice(values, func(i, j int) bool {
-		return values[i] > values[j]
-	})
+	if part == 2 {
+		sort.Slice(values, func(i, j int) bool {
+			return values[i] > values[j]
+		})
+	}
 
 	return values
 }
