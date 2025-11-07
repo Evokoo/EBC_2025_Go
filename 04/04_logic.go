@@ -13,7 +13,7 @@ import (
 // ========================
 
 func I(gearSets [][]float64, rotations float64) float64 {
-	turns := float64(1)
+	turns := 1.0
 	last := gearSets[0][0]
 
 	for _, set := range gearSets[1:] {
@@ -32,9 +32,9 @@ func I(gearSets [][]float64, rotations float64) float64 {
 // PART II
 // ========================
 
-func II(gears [][]float64, target int) float64 {
+func II(gears [][]float64, target float64) float64 {
 	turns := I(gears, 1)
-	return math.Ceil(float64(target) / turns)
+	return math.Ceil(target / turns)
 }
 
 // ========================
@@ -49,8 +49,8 @@ func ParseGears(file string) [][]float64 {
 		var set []float64
 
 		for _, gear := range strings.Split(line, "|") {
-			n, _ := strconv.Atoi(gear)
-			set = append(set, float64(n))
+			n, _ := strconv.ParseFloat(gear, 64)
+			set = append(set, n)
 		}
 
 		sets = append(sets, set)
