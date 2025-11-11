@@ -1,7 +1,7 @@
 package quest06
 
 func Solve(file string, part int) int {
-	locations := ParseInput(file)
+	locations, len := ParseInput(file)
 
 	switch part {
 	case 1:
@@ -9,8 +9,7 @@ func Solve(file string, part int) int {
 	case 2:
 		return I(locations, false)
 	case 3:
-		// locations = ParseInput(file, 1000)
-		// return III()
+		return III(locations, 1000, 1000, len)
 	}
 
 	return 0

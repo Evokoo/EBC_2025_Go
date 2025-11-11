@@ -13,14 +13,13 @@ import (
 func I(locations LocationMap, filter bool) int {
 	count := 0
 
-	for student, indices := range locations.students {
-		if student != 'a' && filter {
+	for novice, indices := range locations.novice {
+		if novice != 'a' && filter {
 			continue
 		}
 
-		mentors := locations.mentors[unicode.ToUpper(student)]
-		for _, i := range indices {
-			for _, j := range mentors {
+		for i := range indices {
+			for j := range locations.mentor[unicode.ToUpper(novice)] {
 				if i > j {
 					count++
 				}
@@ -32,31 +31,85 @@ func I(locations LocationMap, filter bool) int {
 }
 
 // ========================
-// PARSER
+// PART III
 // ========================
-type LocationMap struct {
-	mentors  map[rune][]int
-	students map[rune][]int
+
+func III(locations LocationMap, distance, repeat, length int) int {
+	count := 0
+	total := length * repeat
+
+	for novice, nSet := range locations.novice {
+		mSet := locations.mentor[unicode.ToUpper(novice)]
+
+		for n := range nSet {
+			for offset := -distance; offset <= distance; offset++ {
+				iAbs := n + offset
+
+				first := (0 - iAbs + length - 1) / length
+				last := (total - 1 - iAbs) / length
+
+				if first < 0 {
+					first = 0
+				}
+
+				if last >= repeat {
+					last = repeat - 1
+				}
+
+				if last >= first {
+					if mSet.Has(((iAbs % length) + length) % length) {
+						count += last - first + 1
+					}
+				}
+			}
+		}
+	}
+
+	return count
 }
 
-func ParseInput(file string) LocationMap {
+// ========================
+// PARSER
+// ========================
+type Set map[int]struct{}
+
+func (s Set) Add(value int) {
+	s[value] = struct{}{}
+}
+func (s *Set) Has(value int) bool {
+	_, found := (*s)[value]
+	return found
+}
+
+type LocationMap struct {
+	novice map[rune]Set
+	mentor map[rune]Set
+}
+
+func ParseInput(file string) (LocationMap, int) {
 	data := utils.ReadFile(file)
+	len := len(data)
 	locations := LocationMap{
-		mentors:  make(map[rune][]int, 0),
-		students: make(map[rune][]int, 0),
+		mentor: make(map[rune]Set),
+		novice: make(map[rune]Set),
 	}
 
 	for i, r := range data {
 		if unicode.IsUpper(r) {
-			current := locations.mentors[r]
-			current = append(current, i)
-			locations.mentors[r] = current
+			_, found := locations.mentor[r]
+			if !found {
+				locations.mentor[r] = make(Set)
+			}
+
+			locations.mentor[r].Add(i)
 		} else {
-			current := locations.students[r]
-			current = append(current, i)
-			locations.students[r] = current
+			_, found := locations.novice[r]
+			if !found {
+				locations.novice[r] = make(Set)
+			}
+
+			locations.novice[r].Add(i)
 		}
 	}
-
-	return locations
+	return locations, len
 }
