@@ -9,89 +9,114 @@ import (
 )
 
 // ========================
-// PART I & II
+// PART I
 // ========================
-
-func I(names []string, rules []*regexp.Regexp, part int) any {
-	var score int
-	var validNames []string
-
-list:
-	for i, name := range names {
-	pairs:
-		for i := 2; i <= len(name); i++ {
-			pair := name[i-2 : i]
-
-			for _, rule := range rules {
-				if isMatch := rule.MatchString(pair); isMatch {
-					continue pairs
-				}
-			}
-
-			continue list
-		}
-		if part == 1 {
+func I(names []string, tests Tests) string {
+	for _, name := range names {
+		if IsValidName(name, tests) {
 			return name
 		}
-		if part == 2 {
+	}
+	panic("Name not found")
+}
+
+// ========================
+// PART II
+// ========================
+func II(names []string, tests Tests) (score int) {
+	for i, name := range names {
+		if IsValidName(name, tests) {
 			score += (i + 1)
 		}
-		if part == 3 {
-			validNames = append(validNames, name)
-		}
 	}
-
-	if part == 3 {
-		return validNames
-	}
-
-	return score
+	return
 }
 
 // ========================
 // PART III
 // ========================
-
-func III(names []string, rules []*regexp.Regexp) {
-	suffixes := make(map[string][]string)
-	for _, rule := range rules {
-		chars := utils.QuickMatch(rule.String(), `[a-z|A-Z]`)
-
-		fmt.Println(rule, chars)
-
-		key := chars[0]
-		suffixes[key] = chars[1:]
-	}
-
-	count := 0
-
-	for _, name := range I(names, rules, 3).([]string)[:1] {
-		validNames := make(Set)
-		DFS(name, suffixes, &validNames)
-		count += len(validNames)
-
-		fmt.Println(name)
-		for n := range validNames {
-			fmt.Println(n)
+func III(names []string, rules Rules, tests Tests) int {
+	list := make(Set)
+	for _, name := range names {
+		if IsValidName(name, tests) {
+			DFS(name, rules, &list)
 		}
 	}
-
-	fmt.Println(count)
+	return len(list)
 }
 
-func DFS(name string, suffixes map[string][]string, valid *Set) {
+func DFS(name string, rules Rules, set *Set) {
 	if len(name) >= 7 && len(name) <= 11 {
-		valid.Add(name)
+		set.Add(name)
 	}
 	if len(name) >= 11 {
 		return
 	}
 
 	key := string(name[len(name)-1])
-	options := suffixes[key]
-	for _, option := range options {
-		DFS(name+option, suffixes, valid)
+	for _, char := range rules[key] {
+		DFS(name+char, rules, set)
 	}
+}
+
+// ========================
+// VALIDATOR
+// ========================
+func IsValidName(name string, tests Tests) bool {
+pairs:
+	for i := 2; i <= len(name); i++ {
+		pair := name[i-2 : i]
+		for _, test := range tests {
+			if isMatch := test.MatchString(pair); isMatch {
+				continue pairs
+			}
+		}
+
+		return false
+	}
+	return true
+}
+
+// ========================
+// PARSER
+// ========================
+
+type Rules map[string][]string
+type Tests []*regexp.Regexp
+
+func ParseInput(file string) ([]string, Rules, Tests) {
+	data := utils.ReadFile(file)
+	names := make([]string, 0)
+	rules := make(Rules)
+
+	for i, line := range strings.Split(data, "\n") {
+		if i == 0 {
+			names = strings.Split(line, ",")
+		}
+		if i > 1 {
+			sections := strings.Split(line, " > ")
+			characters := strings.Split(sections[1], ",")
+			rules[sections[0]] = characters
+		}
+	}
+	return names, rules, ConvertRulesToTests(rules)
+}
+func ConvertRulesToTests(rules Rules) Tests {
+	tests := make(Tests, 0, len(rules))
+
+	for key, chars := range rules {
+		var selection strings.Builder
+		for _, char := range chars {
+			selection.WriteString(char)
+		}
+
+		pattern := fmt.Sprintf(`%v[%v]`, key, selection.String())
+		test := regexp.MustCompile(pattern)
+
+		tests = append(tests, test)
+	}
+
+	return tests
 }
 
 // ========================
@@ -99,43 +124,6 @@ func DFS(name string, suffixes map[string][]string, valid *Set) {
 // ========================
 type Set map[string]struct{}
 
-func (s Set) Add(name string) {
-	s[name] = struct{}{}
-}
-func (s Set) Has(name string) bool {
-	_, found := s[name]
-	return found
-}
-
-// ========================
-// PARSER
-// ========================
-
-func ParseInput(file string) ([]string, []*regexp.Regexp) {
-	data := utils.ReadFile(file)
-
-	var names []string
-	var rules []*regexp.Regexp
-
-	for i, line := range strings.Split(data, "\n") {
-		if i == 0 {
-			names = strings.Split(line, ",")
-		}
-
-		if i > 1 {
-			characters := utils.QuickMatch(line, `\w`)
-
-			var selection strings.Builder
-			for _, char := range characters[1:] {
-				selection.WriteString(char)
-			}
-
-			pattern := fmt.Sprintf(`%v[%v]`, characters[0], selection.String())
-			re := regexp.MustCompile(pattern)
-
-			rules = append(rules, re)
-		}
-	}
-
-	return names, rules
+func (s *Set) Add(name string) {
+	(*s)[name] = struct{}{}
 }
