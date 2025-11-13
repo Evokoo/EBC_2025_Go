@@ -7,9 +7,9 @@ func Solve(file string, part int) int {
 	case 1:
 		return I(list, pairs)
 	case 2:
-		return II(list, pairs)
+		return II(list)
 	case 3:
-		return III(list, pairs, nails)
+		return III(list, nails)
 	}
 	return 0
 }

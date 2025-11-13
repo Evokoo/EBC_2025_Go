@@ -25,7 +25,7 @@ func I(list []int, pairs Pairs) int {
 // ========================
 // PART II
 // ========================
-func II(list []int, pairs Pairs) int {
+func II(list []int) int {
 	seen := make(map[[2]int]struct{})
 	knots := 0
 
@@ -46,10 +46,16 @@ func II(list []int, pairs Pairs) int {
 // ========================
 // PART III
 // ========================
-func III(list []int, pairs Pairs, nails int) int {
+func III(list []int, nails int) int {
 	pattern := make(map[[2]int]int)
 	for i := range len(list) - 1 {
-		pattern[[2]int{list[i], list[i+1]}]++
+		key := [2]int{list[i], list[i+1]}
+
+		if key[0] > key[1] {
+			key[0], key[1] = key[1], key[0]
+		}
+
+		pattern[key]++
 	}
 
 	best := 0
