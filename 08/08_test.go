@@ -19,8 +19,8 @@ var tests = []Test{
 	{part: 1, file: "inputs/input_I.txt", target: 64},
 	{part: 2, file: "inputs/example_II.txt", target: 21},
 	{part: 2, file: "inputs/input_II.txt", target: 2928092},
-	// {part: 3, file: "inputs/example_III.txt", target: -1},
-	// {part: 3, file: "inputs/input_III.txt", target: -1},
+	{part: 3, file: "inputs/example_III.txt", target: 7},
+	{part: 3, file: "inputs/input_III.txt", target: 2795},
 }
 
 var _ = Describe("EBC 2025 - Quest 08", func() {
