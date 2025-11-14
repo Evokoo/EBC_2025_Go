@@ -1,7 +1,6 @@
 package quest09
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 
@@ -11,15 +10,16 @@ import (
 // ========================
 // I
 // ========================
-func I(dna []DNA) int {
+func I(dna []DNA) (int, [3]int) {
 	childIndex := FindChildIndex(dna)
 
 	if childIndex == -1 {
-		return -1
+		return -1, [3]int{}
 	}
 
 	child := dna[childIndex].sequence
-	var likeness []int
+	product := 1
+
 	for i, member := range dna {
 		if i == childIndex {
 			continue
@@ -31,50 +31,62 @@ func I(dna []DNA) int {
 				score++
 			}
 		}
-
-		likeness = append(likeness, score)
+		product *= score
 	}
 
-	return likeness[0] * likeness[1]
+	var family [3]int
+	switch childIndex {
+	case 0:
+		family = [3]int{0, 1, 2}
+	case 1:
+		family = [3]int{1, 0, 2}
+	case 2:
+		family = [3]int{2, 0, 1}
+	}
+
+	return product, family
 }
 
 func FindChildIndex(dna []DNA) int {
-	sequences := make([][]rune, 0)
-	for _, member := range dna {
-		sequences = append(sequences, member.sequence)
-	}
+	length := len(dna[0].sequence)
+	common := [3]int{0, 0, 0}
 
-	common := make(map[int]int)
-	for i := range len(sequences[0]) {
-		matches := make(map[rune][]int)
+	for i := range length {
+		a := dna[0].sequence[i]
+		b := dna[1].sequence[i]
+		c := dna[2].sequence[i]
 
-		for j, sequence := range sequences {
-			r := sequence[i]
-			matches[r] = append(matches[r], j)
+		if a != b && a != c && b != c {
+			return -1
 		}
 
-		for _, indices := range matches {
-			if len(indices) > 1 {
-				for _, index := range indices {
-					common[index]++
-				}
-			}
+		if a == b && b == c {
+			common[0]++
+			common[1]++
+			common[2]++
+			continue
+		}
+		if a == b {
+			common[0]++
+			common[1]++
+		}
+		if a == c {
+			common[0]++
+			common[2]++
+		}
+		if b == c {
+			common[1]++
+			common[2]++
 		}
 	}
 
-	var result [2]int
-	for index, count := range common {
-		if count > result[1] {
-			result[0] = index
-			result[1] = count
+	for index, value := range common {
+		if value == length {
+			return index
 		}
 	}
 
-	if result[1] == len(sequences[0]) {
-		return result[0]
-	} else {
-		return -1
-	}
+	return -1
 }
 
 // ========================
@@ -82,24 +94,15 @@ func FindChildIndex(dna []DNA) int {
 // ========================
 
 func II(dna []DNA) int {
-	seen := make(Set)
 	sum := 0
 
 	for a := 0; a < len(dna); a++ {
 		for b := a + 1; b < len(dna); b++ {
 			for c := b + 1; c < len(dna); c++ {
-				key := [3]int{a, b, c}
-				sort.Ints(key[:])
+				score, _ := I([]DNA{dna[a], dna[b], dna[c]})
 
-				if seen.Has(key) {
-					continue
-				} else {
-					seen.Add(key)
-				}
-
-				score := I([]DNA{dna[a], dna[b], dna[c]})
 				if score != -1 {
-					sum += I([]DNA{dna[a], dna[b], dna[c]})
+					sum += score
 				}
 			}
 		}
@@ -109,16 +112,100 @@ func II(dna []DNA) int {
 }
 
 // ========================
-// SET
+// III
 // ========================
-type Set map[[3]int]struct{}
 
-func (s *Set) Add(key [3]int) {
-	(*s)[key] = struct{}{}
+type Node struct {
+	id       int
+	parents  []*Node
+	children []*Node
 }
-func (s *Set) Has(key [3]int) bool {
-	_, found := (*s)[key]
-	return found
+type Tree map[int]*Node
+
+func (t *Tree) AddNode(id int) {
+	(*t)[id] = &Node{id: id + 1}
+}
+func (t *Tree) GetNode(id int) *Node {
+	node, found := (*t)[id]
+
+	if !found {
+		t.AddNode(id)
+		return t.GetNode(id)
+	}
+
+	return node
+}
+
+func (t *Tree) AddFamily(family [3]int) {
+	c := t.GetNode(family[0])
+	p1 := t.GetNode(family[1])
+	p2 := t.GetNode(family[2])
+
+	c.parents = append(c.parents, p1, p2)
+	p1.children = append(p1.children, c)
+	p2.children = append(p2.children, c)
+}
+
+func III(dna []DNA) int {
+	tree := make(Tree)
+	children := make(Set)
+
+	for a := 0; a < len(dna); a++ {
+		for b := a + 1; b < len(dna); b++ {
+			for c := b + 1; c < len(dna); c++ {
+				score, indexes := I([]DNA{dna[a], dna[b], dna[c]})
+
+				if score != -1 {
+					family := [3]int{0, 0, 0}
+
+					for i, index := range indexes {
+						family[i] = []int{a, b, c}[index]
+					}
+
+					tree.AddFamily(family)
+					children.Add(family[0])
+				}
+			}
+		}
+	}
+
+	visited := make(Set)
+	result := [2]int{0, 0}
+
+	for i := range children {
+		node := tree.GetNode(i)
+
+		if visited.Has(node.id) {
+			continue
+		} else {
+			score, size := 0, 0
+			DFS(node, &score, &size, &visited)
+
+			if size > result[0] {
+				result[0] = size
+				result[1] = score
+			}
+		}
+	}
+
+	return result[1]
+}
+
+func DFS(node *Node, score, size *int, visited *Set) {
+	if visited.Has(node.id) {
+		return
+	}
+
+	visited.Add(node.id)
+	*score += node.id
+	*size++
+
+	for _, parent := range node.parents {
+		DFS(parent, score, size, visited)
+	}
+	for _, child := range node.children {
+		DFS(child, score, size, visited)
+	}
 }
 
 // ========================
@@ -126,7 +213,7 @@ func (s *Set) Has(key [3]int) bool {
 // ========================
 type DNA struct {
 	id       int
-	sequence []rune
+	sequence []string
 }
 
 func ParseInput(file string) []DNA {
@@ -135,14 +222,24 @@ func ParseInput(file string) []DNA {
 	var output []DNA
 
 	for line := range strings.SplitSeq(data, "\n") {
-		id, _ := strconv.Atoi(string(line[0]))
-		sequence := make([]rune, 0, len(line)-2)
-
-		for _, r := range line[2:] {
-			sequence = append(sequence, r)
-		}
+		sections := strings.Split(line, ":")
+		id, _ := strconv.Atoi(sections[0])
+		sequence := strings.Split(sections[1], "")
 		output = append(output, DNA{id, sequence})
 	}
 
 	return output
+}
+
+// ========================
+// SET
+// ========================
+type Set map[int]struct{}
+
+func (s *Set) Add(id int) {
+	(*s)[id] = struct{}{}
+}
+func (s *Set) Has(id int) bool {
+	_, found := (*s)[id]
+	return found
 }

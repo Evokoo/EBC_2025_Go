@@ -5,9 +5,12 @@ func Solve(file string, part int) int {
 
 	switch part {
 	case 1:
-		return I(dna)
+		score, _ := I(dna)
+		return score
 	case 2:
 		return II(dna)
+	case 3:
+		return III(dna)
 	}
 
 	return 0
