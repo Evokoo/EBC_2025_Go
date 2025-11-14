@@ -157,9 +157,10 @@ func III(dna []DNA) int {
 
 				if score != -1 {
 					family := [3]int{0, 0, 0}
+					triplet := [3]int{a, b, c}
 
 					for i, index := range indexes {
-						family[i] = []int{a, b, c}[index]
+						family[i] = triplet[index]
 					}
 
 					tree.AddFamily(family)
@@ -213,7 +214,7 @@ func DFS(node *Node, score, size *int, visited *Set) {
 // ========================
 type DNA struct {
 	id       int
-	sequence []string
+	sequence []byte
 }
 
 func ParseInput(file string) []DNA {
@@ -224,7 +225,7 @@ func ParseInput(file string) []DNA {
 	for line := range strings.SplitSeq(data, "\n") {
 		sections := strings.Split(line, ":")
 		id, _ := strconv.Atoi(sections[0])
-		sequence := strings.Split(sections[1], "")
+		sequence := []byte(sections[1])
 		output = append(output, DNA{id, sequence})
 	}
 
