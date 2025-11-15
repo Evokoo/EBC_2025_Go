@@ -17,8 +17,8 @@ type Test struct {
 var tests = []Test{
 	{part: 1, file: "inputs/example_I.txt", target: 40},
 	{part: 1, file: "inputs/input_I.txt", target: 144},
-	// {part: 2, file: "inputs/example_II.txt", target: -1},
-	// {part: 2, file: "inputs/input_II.txt", target: -1},
+	{part: 2, file: "inputs/example_II.txt", target: 34},
+	{part: 2, file: "inputs/input_II.txt", target: 1770},
 	// {part: 3, file: "inputs/example_III.txt", target: -1},
 	// {part: 3, file: "inputs/input_III.txt", target: -1},
 }
