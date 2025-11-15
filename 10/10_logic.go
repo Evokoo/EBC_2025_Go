@@ -16,28 +16,30 @@ var DIRECTIONS = []Point{{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-
 // ========================
 
 func I(grid Grid, rounds int) int {
-	currentRound := NewQueue(grid.dragon)
-	nextRound := make(Queue, 0)
-	seen := make(Set)
+	dQueue := NewQueue(grid.dragon)
+	occupied := make(Set)
 
 	for range rounds {
-		for _, dragon := range currentRound {
+		dLength := len(dQueue)
+
+		for range dLength {
+			dragon := dQueue.Pop()
+
 			for _, direction := range DIRECTIONS {
 				next := Point{dragon.x + direction.x, dragon.y + direction.y}
 
-				if grid.InRange(next) && !seen.Has(next) {
-					nextRound.Push(next)
+				if grid.InRange(next) && !occupied.Has(next) {
+					dQueue.Push(next)
 				}
 			}
-			seen.Add(dragon)
+
+			occupied.Add(dragon)
 		}
-		currentRound = nextRound
-		nextRound.Clear()
 	}
 
 	count := 0
 	for _, sheep := range grid.sheep {
-		if seen.Has(sheep) {
+		if occupied.Has(sheep) {
 			count++
 		}
 	}
@@ -48,54 +50,49 @@ func I(grid Grid, rounds int) int {
 // PART II
 // ========================
 func II(grid Grid, rounds int) int {
-	dragonCurrent := NewQueue(grid.dragon)
-	dragonNext := make(Queue, 0)
-
-	sheepCurrent := grid.sheep
-	sheepNext := make(Queue, 0)
-
+	dQueue := NewQueue(grid.dragon)
+	sQueue := grid.sheep
 	eaten := 0
 
 	for range rounds {
-		dragons := make(Set)
+		occupied := make(Set)
 
 		// Dragon Moves
-		for _, dragon := range dragonCurrent {
+		dLength := len(dQueue)
+		for range dLength {
+			dragon := dQueue.Pop()
 			for _, direction := range DIRECTIONS {
 				next := Point{dragon.x + direction.x, dragon.y + direction.y}
 
-				if grid.InRange(next) && !dragons.Has(next) {
-					dragonNext.Push(next)
-					dragons.Add(next)
+				if grid.InRange(next) && !occupied.Has(next) {
+					dQueue.Push(next)
+					occupied.Add(next)
 				}
 			}
 		}
 
 		//Sheep Moves
-		for _, sheep := range sheepCurrent {
-			if dragons.Has(sheep) && !grid.hut.Has(sheep) {
+		sLength := len(sQueue)
+		for range sLength {
+			sheep := sQueue.Pop()
+
+			if occupied.Has(sheep) && !grid.hut.Has(sheep) {
 				eaten++
 				continue
 			}
 
 			next := Point{sheep.x, sheep.y + 1}
 
-			if next.y >= grid.rows {
+			if next.y == grid.rows {
 				continue
 			} else {
-				if dragons.Has(next) && !grid.hut.Has(next) {
+				if occupied.Has(next) && !grid.hut.Has(next) {
 					eaten++
 				} else {
-					sheepNext.Push(next)
+					sQueue.Push(next)
 				}
 			}
 		}
-
-		sheepCurrent = sheepNext
-		sheepNext.Clear()
-		dragonCurrent = dragonNext
-		dragonNext.Clear()
-
 	}
 
 	return eaten
@@ -143,9 +140,6 @@ func (q *Queue) Push(value Point) {
 func (q *Queue) IsEmpty() bool {
 	return len(*q) == 0
 }
-func (q *Queue) Clear() {
-	(*q) = make(Queue, 0)
-}
 
 // ========================
 // PARSER
@@ -162,10 +156,6 @@ type Grid struct {
 func (g *Grid) InRange(point Point) bool {
 	return point.x >= 0 && point.x < g.cols && point.y >= 0 && point.y < g.rows
 }
-
-//	func (g *Grid) IsSheep(point Point) bool {
-//		return g.sheep.Has(point)
-//	}
 func (g *Grid) IsHut(point Point) bool {
 	return g.hut.Has(point)
 }
