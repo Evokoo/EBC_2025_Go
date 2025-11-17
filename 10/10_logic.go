@@ -2,6 +2,7 @@ package quest10
 
 import (
 	// "strconv"
+
 	"strings"
 
 	"github.com/Evokoo/EBC_2025_Go/utils"
@@ -10,7 +11,7 @@ import (
 // ========================
 // PART I
 // ========================
-func I(dragon Dragon, sheep Sheep, grid Grid, rounds int) int {
+func I(dragon Dragon, sheep Queue, grid Grid, rounds int) int {
 	queue := NewQueue(dragon)
 	occupied := make(Set[Point])
 
@@ -42,7 +43,7 @@ func I(dragon Dragon, sheep Sheep, grid Grid, rounds int) int {
 // ========================
 // PART II
 // ========================
-func II(dragon Dragon, sheep Sheep, grid Grid, rounds int) int {
+func II(dragon Dragon, sheep Queue, grid Grid, rounds int) int {
 	dQueue := NewQueue(dragon)
 	sQueue := sheep
 	eaten := 0
@@ -74,7 +75,7 @@ func II(dragon Dragon, sheep Sheep, grid Grid, rounds int) int {
 				continue
 			}
 
-			sheep.MoveDown()
+			sheep.y++
 
 			if sheep.y == grid.rows {
 				continue
@@ -94,19 +95,132 @@ func II(dragon Dragon, sheep Sheep, grid Grid, rounds int) int {
 // ========================
 // PART III
 // ========================
+type Sheep [8]int
 
-func III(dragon Dragon, sheep Sheep, grid Grid) {
+type State struct {
+	sheepCache  map[uint64]uint64
+	dragonCache map[uint64]uint64
+}
 
+func NewState() *State {
+	return &State{
+		sheepCache:  make(map[uint64]uint64),
+		dragonCache: make(map[uint64]uint64),
+	}
+}
+
+func key(dragon Point, sheep Sheep) uint64 {
+	var key uint64
+	// Dragon: 6 bits for x (3 bits) + y (3 bits)
+	key = uint64(dragon.x)<<3 | uint64(dragon.y)
+	// Sheep: 4 bits per column (if rows ≤ 15)
+	for i := 0; i < 8; i++ {
+		s := sheep[i] + 1 // shift -1 -> 0
+		key = (key << 4) | uint64(s)
+	}
+	return key
+}
+
+func ConvertQueue(sheepQueue Queue) Sheep {
+	var sheep Sheep
+	for i := range sheep {
+		sheep[i] = -1
+	}
+	for _, s := range sheepQueue {
+		sheep[s.x] = s.y
+	}
+	return sheep
+}
+
+func III(dragon Dragon, sheepQueue Queue, grid Grid) uint64 {
+	sheep := ConvertQueue(sheepQueue)
+	state := NewState()
+	return sheepMove(state, grid, dragon, sheep)
+}
+
+func sheepMove(state *State, grid Grid, dragon Point, sheep Sheep) uint64 {
+	k := key(dragon, sheep)
+	if val, ok := state.sheepCache[k]; ok {
+		return val
+	}
+
+	result := uint64(0)
+	moved := false
+
+	for i, s := range sheep {
+		if s == -1 { // inactive sheep
+			continue
+		}
+
+		nextY := s + 1
+		point := Point{x: i, y: nextY}
+
+		// Moved off board or found instant exit square
+		if !grid.InRange(point) || grid.IsExit(point) {
+			moved = true
+			continue
+		}
+
+		// Can't move onto dragon (unless hut)
+		if point == dragon && !grid.IsHut(point) {
+			continue
+		}
+
+		// Sheep moves forward
+		moved = true
+		nextSheep := sheep
+		nextSheep[i] = nextY
+
+		result += dragonMove(state, grid, dragon, nextSheep)
+	}
+
+	// If no sheep moved at all, dragon moves
+	if !moved {
+		result = dragonMove(state, grid, dragon, sheep)
+	}
+
+	state.sheepCache[k] = result
+	return result
+}
+func dragonMove(state *State, grid Grid, dragon Point, sheep Sheep) uint64 {
+	k := key(dragon, sheep)
+	if val, ok := state.dragonCache[k]; ok {
+		return val
+	}
+
+	result := uint64(0)
+	for _, next := range dragon.ValidMoves(grid) {
+		currentSheep := sheep
+
+		// Eat a sheep if present and not in hut
+		if currentSheep[next.x] == next.y && !grid.IsHut(next) {
+			currentSheep[next.x] = -1
+		}
+
+		if AllSheepEaten(currentSheep) {
+			result += 1
+		} else {
+			result += sheepMove(state, grid, next, currentSheep)
+		}
+	}
+
+	state.dragonCache[k] = result
+	return result
+}
+
+func AllSheepEaten(sheep Sheep) bool {
+	for _, s := range sheep {
+		if s != -1 {
+			return false
+		}
+	}
+	return true
 }
 
 // ========================
 // POINT
 // ========================
 type Point struct{ x, y int }
-
-func (p *Point) MoveDown() {
-	(*p).y++
-}
 
 // ========================
 // SET
@@ -151,6 +265,7 @@ type Grid struct {
 	cols int
 	rows int
 	hut  Set[Point]
+	exit Set[Point]
 }
 
 func (g *Grid) InRange(point Point) bool {
@@ -158,6 +273,9 @@ func (g *Grid) InRange(point Point) bool {
 }
 func (g *Grid) IsHut(point Point) bool {
 	return g.hut.Has(point)
+}
+func (g *Grid) IsExit(point Point) bool {
+	return g.exit.Has(point)
 }
 
 // ========================
@@ -182,24 +300,20 @@ func (d *Dragon) ValidMoves(grid Grid) []Point {
 }
 
 // ========================
-// SHEEP
-// ========================
-type Sheep = Queue
-
-// ========================
 // PARSER
 // ========================
-func ParseInput(file string) (Grid, Dragon, Sheep) {
+func ParseInput(file string) (Grid, Dragon, Queue) {
 	data := utils.ReadFile(file)
 	matrix := strings.Split(data, "\n")
 	grid := Grid{
 		rows: len(matrix),
 		cols: len(matrix[0]),
 		hut:  make(Set[Point]),
+		exit: make(Set[Point]),
 	}
 
 	var dragon Dragon
-	var sheep Sheep
+	var sheep Queue
 
 	for y, row := range matrix {
 		for x, r := range row {
@@ -211,6 +325,9 @@ func ParseInput(file string) (Grid, Dragon, Sheep) {
 			}
 			if r == '#' {
 				grid.hut.Add(Point{x, y})
+			}
+			if r == 'V' {
+				grid.exit.Add(Point{x, y})
 			}
 		}
 	}

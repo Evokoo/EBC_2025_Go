@@ -9,7 +9,7 @@ func Solve(file string, part int) int {
 	case 2:
 		return II(dragon, sheep, grid, 20)
 	case 3:
-		III(dragon, sheep, grid)
+		return int(III(dragon, sheep, grid))
 	}
 	return 0
 }
