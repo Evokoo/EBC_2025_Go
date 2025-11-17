@@ -1,79 +1,72 @@
 package quest10
 
 import (
+	// "strconv"
 	"strings"
 
 	"github.com/Evokoo/EBC_2025_Go/utils"
 )
 
 // ========================
-// DIRECTIONS
-// ========================
-var DIRECTIONS = []Point{{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}
-
-// ========================
 // PART I
 // ========================
-
-func I(grid Grid, rounds int) int {
-	dQueue := NewQueue(grid.dragon)
-	occupied := make(Set)
+func I(dragon Dragon, sheep Sheep, grid Grid, rounds int) int {
+	queue := NewQueue(dragon)
+	occupied := make(Set[Point])
 
 	for range rounds {
-		dLength := len(dQueue)
+		length := len(queue)
 
-		for range dLength {
-			dragon := dQueue.Pop()
+		for range length {
+			current := queue.Pop()
 
-			for _, direction := range DIRECTIONS {
-				next := Point{dragon.x + direction.x, dragon.y + direction.y}
-
-				if grid.InRange(next) && !occupied.Has(next) {
-					dQueue.Push(next)
+			for _, move := range current.ValidMoves(grid) {
+				if !occupied.Has(move) {
+					queue.Push(move)
 				}
 			}
-
-			occupied.Add(dragon)
+			occupied.Add(current)
 		}
 	}
 
 	count := 0
-	for _, sheep := range grid.sheep {
+	for _, sheep := range sheep {
 		if occupied.Has(sheep) {
 			count++
 		}
 	}
+
 	return count
 }
 
 // ========================
 // PART II
 // ========================
-func II(grid Grid, rounds int) int {
-	dQueue := NewQueue(grid.dragon)
-	sQueue := grid.sheep
+func II(dragon Dragon, sheep Sheep, grid Grid, rounds int) int {
+	dQueue := NewQueue(dragon)
+	sQueue := sheep
 	eaten := 0
 
 	for range rounds {
-		occupied := make(Set)
+		occupied := make(Set[Point])
 
 		// Dragon Moves
-		dLength := len(dQueue)
-		for range dLength {
-			dragon := dQueue.Pop()
-			for _, direction := range DIRECTIONS {
-				next := Point{dragon.x + direction.x, dragon.y + direction.y}
+		length := len(dQueue)
 
-				if grid.InRange(next) && !occupied.Has(next) {
-					dQueue.Push(next)
-					occupied.Add(next)
+		for range length {
+			current := dQueue.Pop()
+
+			for _, move := range current.ValidMoves(grid) {
+				if !occupied.Has(move) {
+					dQueue.Push(move)
+					occupied.Add(move)
 				}
 			}
 		}
 
 		//Sheep Moves
-		sLength := len(sQueue)
-		for range sLength {
+		length = len(sQueue)
+		for range length {
 			sheep := sQueue.Pop()
 
 			if occupied.Has(sheep) && !grid.hut.Has(sheep) {
@@ -81,21 +74,29 @@ func II(grid Grid, rounds int) int {
 				continue
 			}
 
-			next := Point{sheep.x, sheep.y + 1}
+			sheep.MoveDown()
 
-			if next.y == grid.rows {
+			if sheep.y == grid.rows {
 				continue
-			} else {
-				if occupied.Has(next) && !grid.hut.Has(next) {
-					eaten++
-				} else {
-					sQueue.Push(next)
-				}
 			}
+
+			if occupied.Has(sheep) && !grid.hut.Has(sheep) {
+				eaten++
+				continue
+			}
+
+			sQueue.Push(sheep)
 		}
 	}
-
 	return eaten
+}
+
+// ========================
+// PART III
+// ========================
+
+func III(dragon Dragon, sheep Sheep, grid Grid) {
+
 }
 
 // ========================
@@ -103,20 +104,22 @@ func II(grid Grid, rounds int) int {
 // ========================
 type Point struct{ x, y int }
 
+func (p *Point) MoveDown() {
+	(*p).y++
+}
+
 // ========================
 // SET
 // ========================
-type Set map[Point]struct{}
+type Set[T comparable] map[T]struct{}
 
-func (s *Set) Add(coord Point) {
-	(*s)[coord] = struct{}{}
+func (s Set[T]) Add(v T) {
+	s[v] = struct{}{}
 }
-func (s *Set) Has(coord Point) bool {
-	_, found := (*s)[coord]
-	return found
-}
-func (s *Set) Remove(coord Point) {
-	delete(*s, coord)
+
+func (s Set[T]) Has(v T) bool {
+	_, ok := s[v]
+	return ok
 }
 
 // ========================
@@ -142,15 +145,12 @@ func (q *Queue) IsEmpty() bool {
 }
 
 // ========================
-// PARSER
+// GRID
 // ========================
-
 type Grid struct {
-	cols   int
-	rows   int
-	sheep  Queue
-	hut    Set
-	dragon Point
+	cols int
+	rows int
+	hut  Set[Point]
 }
 
 func (g *Grid) InRange(point Point) bool {
@@ -160,22 +160,54 @@ func (g *Grid) IsHut(point Point) bool {
 	return g.hut.Has(point)
 }
 
-func ParseInput(file string) Grid {
+// ========================
+// DRAGON
+// ========================
+type Dragon = Point
+
+var DIRECTIONS = []Point{{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}
+
+func (d *Dragon) ValidMoves(grid Grid) []Point {
+	moves := make([]Point, 0, len(DIRECTIONS))
+
+	for _, direction := range DIRECTIONS {
+		next := Point{d.x + direction.x, d.y + direction.y}
+
+		if grid.InRange(next) {
+			moves = append(moves, next)
+		}
+	}
+
+	return moves
+}
+
+// ========================
+// SHEEP
+// ========================
+type Sheep = Queue
+
+// ========================
+// PARSER
+// ========================
+func ParseInput(file string) (Grid, Dragon, Sheep) {
 	data := utils.ReadFile(file)
 	matrix := strings.Split(data, "\n")
 	grid := Grid{
 		rows: len(matrix),
 		cols: len(matrix[0]),
-		hut:  make(Set),
+		hut:  make(Set[Point]),
 	}
+
+	var dragon Dragon
+	var sheep Sheep
 
 	for y, row := range matrix {
 		for x, r := range row {
 			if r == 'S' {
-				grid.sheep.Push(Point{x, y})
+				sheep.Push(Point{x, y})
 			}
 			if r == 'D' {
-				grid.dragon = Point{x, y}
+				dragon = Point{x, y}
 			}
 			if r == '#' {
 				grid.hut.Add(Point{x, y})
@@ -183,5 +215,5 @@ func ParseInput(file string) Grid {
 		}
 	}
 
-	return grid
+	return grid, dragon, sheep
 }
