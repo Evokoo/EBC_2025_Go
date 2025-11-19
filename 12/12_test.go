@@ -15,12 +15,12 @@ type Test struct {
 }
 
 var tests = []Test{
-	// {part: 1, file: "inputs/example_I.txt", target: 16},
-	// {part: 1, file: "inputs/input_I.txt", target: 223},
-	// {part: 2, file: "inputs/example_II.txt", target: 58},
-	// {part: 2, file: "inputs/input_II.txt", target: 5779},
+	{part: 1, file: "inputs/example_I.txt", target: 16},
+	{part: 1, file: "inputs/input_I.txt", target: 223},
+	{part: 2, file: "inputs/example_II.txt", target: 58},
+	{part: 2, file: "inputs/input_II.txt", target: 5779},
 	{part: 3, file: "inputs/example_III.txt", target: 136},
-	{part: 3, file: "inputs/input_III.txt", target: -1},
+	{part: 3, file: "inputs/input_III.txt", target: 4086},
 }
 
 var _ = Describe("EBC 2025 - Quest 12", func() {

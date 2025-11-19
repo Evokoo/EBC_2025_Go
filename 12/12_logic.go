@@ -1,7 +1,6 @@
 package quest12
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/Evokoo/EBC_2025_Go/utils"
@@ -25,17 +24,19 @@ func (b *Barrels) InRange(coord [2]int) bool {
 	return x >= 0 && x < b.cols && y >= 0 && y < b.rows
 }
 
-func (b *Barrels) ValidMoves(current [2]int, seen Set[[2]int]) [][2]int {
+func (b *Barrels) ValidMoves(current [2]int, visited [][]bool) [][2]int {
 	currentValue := b.GetValue(current)
 
-	var moves [][2]int
+	moves := make([][2]int, 0, 4)
 	for _, dir := range DIRECTIONS {
-		next := [2]int{dir[0] + current[0], dir[1] + current[1]}
+		nx, ny := dir[0]+current[0], dir[1]+current[1]
+		next := [2]int{nx, ny}
 
-		if b.InRange(next) && !seen.Has(next) && currentValue >= b.GetValue(next) {
+		if b.InRange(next) && !visited[ny][nx] && currentValue >= b.GetValue(next) {
 			moves = append(moves, next)
 		}
 	}
+
 	return moves
 }
 
@@ -43,137 +44,100 @@ func (b *Barrels) GetValue(coord [2]int) int {
 	return b.grid[coord[1]][coord[0]]
 }
 
-func (b *Barrels) IsPeak(current [2]int) bool {
-	value := b.GetValue(current)
-
-	for _, dir := range DIRECTIONS {
-		next := [2]int{dir[0] + current[0], dir[1] + current[1]}
-
-		var adjacentValue int
-		if !b.InRange(next) {
-			adjacentValue = 0
-		} else {
-			adjacentValue = b.GetValue(next)
-		}
-
-		if value < adjacentValue {
-			return false
-		}
-	}
-	return true
-}
-
 // ========================
 // PART I & II
 // ========================
 
-func I(barrels Barrels, seen Set[[2]int], ignitionPoints [][2]int) Set[[2]int] {
+func I(barrels Barrels, tracker Tracker, ignitionPoints [][2]int, maintain bool) int {
 	queue := NewQueue[[2]int]()
 
 	for _, point := range ignitionPoints {
 		queue.Push(point)
 	}
 
+	count := 0
+
 	for !queue.IsEmpty() {
 		current := queue.Pop()
+		x, y := current[0], current[1]
 
-		if seen.Has(current) {
+		if tracker.visited[y][x] {
 			continue
 		} else {
-			seen.Add(current)
+			tracker.visited[y][x] = true
+			tracker.perRun = append(tracker.perRun, current)
+			count++
 		}
 
-		for _, next := range barrels.ValidMoves(current, seen) {
+		for _, next := range barrels.ValidMoves(current, tracker.visited) {
 			queue.Push(next)
 		}
 	}
 
-	return seen
+	if !maintain {
+		tracker.RemoveCurrentRun()
+	}
+
+	return count
 }
 
 // ========================
 // PART III
 // ========================
 
-type Best struct {
-	coord     [2]int
-	count     int
-	destoryed Set[[2]int]
+func III(barrels Barrels) int {
+	tracker := NewTracker(barrels.rows, barrels.cols)
+
+	count := 0
+
+	for range 3 {
+		maxCount := 0
+		bestCoord := [2]int{}
+
+		for y := 0; y < barrels.rows; y++ {
+			for x := 0; x < barrels.cols; x++ {
+				if tracker.visited[y][x] {
+					continue
+				}
+
+				count := I(barrels, *tracker, [][2]int{{x, y}}, false)
+				if count > maxCount {
+					maxCount = count
+					bestCoord = [2]int{x, y}
+				}
+			}
+		}
+
+		count += I(barrels, *tracker, [][2]int{bestCoord}, true)
+	}
+
+	return count
 }
 
-func III(barrels Barrels) {
-	roundOne := Best{
-		coord:     [2]int{},
-		count:     0,
-		destoryed: make(Set[[2]int]),
+// ========================
+// TRACKER
+// ========================
+type Tracker struct {
+	visited [][]bool
+	perRun  [][2]int
+}
+
+func NewTracker(rows, cols int) *Tracker {
+	visited := make([][]bool, rows)
+	for y := range visited {
+		visited[y] = make([]bool, cols)
 	}
-
-	// B1
-	for y := 0; y < barrels.rows; y++ {
-		for x := 0; x < barrels.cols; x++ {
-			current := [2]int{x, y}
-
-			destoryed := I(barrels, make(Set[[2]int]), [][2]int{current})
-
-			if destoryed.Length() > roundOne.count {
-				roundOne.coord = current
-				roundOne.count = destoryed.Length()
-				roundOne.destoryed = destoryed
-			}
-		}
+	return &Tracker{
+		visited: visited,
+		perRun:  make([][2]int, 0, rows*cols),
 	}
+}
 
-	roundTwo := Best{
-		coord:     [2]int{},
-		count:     0,
-		destoryed: make(Set[[2]int]),
+func (t *Tracker) RemoveCurrentRun() {
+	for _, d := range t.perRun {
+		t.visited[d[1]][d[0]] = false
 	}
-
-	// B2
-	for y := 0; y < barrels.rows; y++ {
-		for x := 0; x < barrels.cols; x++ {
-			current := [2]int{x, y}
-
-			if roundOne.destoryed.Has(current) {
-				continue
-			}
-
-			destoryed := I(barrels, roundOne.destoryed.Clone(), [][2]int{current})
-
-			if destoryed.Length() > roundTwo.count {
-				roundTwo.coord = current
-				roundTwo.count = destoryed.Length()
-				roundTwo.destoryed = destoryed
-			}
-		}
-	}
-
-	roundThee := Best{
-		coord:     [2]int{},
-		count:     0,
-		destoryed: make(Set[[2]int]),
-	}
-
-	// B3
-	for y := 0; y < barrels.rows; y++ {
-		for x := 0; x < barrels.cols; x++ {
-			current := [2]int{x, y}
-
-			if roundTwo.destoryed.Has(current) {
-				continue
-			}
-
-			destoryed := I(barrels, roundTwo.destoryed.Clone(), [][2]int{current})
-
-			if destoryed.Length() > roundThee.count {
-				roundThee.coord = current
-				roundThee.count = destoryed.Length()
-				roundThee.destoryed = destoryed
-			}
-		}
-	}
-
-	fmt.Println(roundThee)
+	t.perRun = t.perRun[:0]
 }
 
 // ========================
@@ -219,30 +183,4 @@ func (q *Queue[T]) Push(value T) {
 
 func (q *Queue[T]) IsEmpty() bool {
 	return len(*q) == 0
-}
-
-// ========================
-// SET
-// ========================
-type Set[T comparable] map[T]struct{}
-
-func (s *Set[T]) Add(v T) {
-	(*s)[v] = struct{}{}
-}
-
-func (s Set[T]) Has(v T) bool {
-	_, ok := (s)[v]
-	return ok
-}
-
-func (s Set[T]) Length() int {
-	return len(s)
-}
-
-func (s Set[T]) Clone() Set[T] {
-	newSet := make(Set[T], s.Length())
-	for k := range s {
-		newSet[k] = struct{}{}
-	}
-	return newSet
 }

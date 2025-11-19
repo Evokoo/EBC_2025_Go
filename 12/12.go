@@ -6,15 +6,15 @@ func Solve(file string, part int) int {
 	a := [2]int{0, 0}
 	b := [2]int{barrels.cols - 1, barrels.rows - 1}
 
+	tracker := NewTracker(barrels.rows, barrels.cols)
+
 	switch part {
 	case 1:
-		destoryed := I(barrels, make(Set[[2]int]), [][2]int{a})
-		return len(destoryed)
+		return I(barrels, *tracker, [][2]int{a}, false)
 	case 2:
-		destoryed := I(barrels, make(Set[[2]int]), [][2]int{a, b})
-		return len(destoryed)
+		return I(barrels, *tracker, [][2]int{a, b}, false)
 	case 3:
-		III(barrels)
+		return III(barrels)
 	}
 	return 0
 }
