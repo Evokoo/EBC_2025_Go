@@ -10,9 +10,9 @@ func Solve(file string, part int) int {
 
 	switch part {
 	case 1:
-		return I(barrels, *tracker, [][2]int{a}, false)
+		return I(barrels, tracker, [][2]int{a}, false)
 	case 2:
-		return I(barrels, *tracker, [][2]int{a, b}, false)
+		return I(barrels, tracker, [][2]int{a, b}, false)
 	case 3:
 		return III(barrels)
 	}

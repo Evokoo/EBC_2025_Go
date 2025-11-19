@@ -11,44 +11,55 @@ import (
 // ========================
 
 type Barrels struct {
-	rows int
-	cols int
-	grid [][]int
+	rows, cols int
+	grid       [][]int
+	cache      map[[2]int][][2]int
+	moves      [][2]int
 }
 
 var DIRECTIONS = [][2]int{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
 
 func (b *Barrels) InRange(coord [2]int) bool {
-	x := coord[0]
-	y := coord[1]
+	x, y := coord[0], coord[1]
 	return x >= 0 && x < b.cols && y >= 0 && y < b.rows
 }
 
-func (b *Barrels) ValidMoves(current [2]int, visited [][]bool) [][2]int {
-	currentValue := b.GetValue(current)
+func (b *Barrels) CacheMoves() {
+	for y := 0; y < b.rows; y++ {
+		for x := 0; x < b.cols; x++ {
+			current := [2]int{x, y}
 
-	moves := make([][2]int, 0, 4)
-	for _, dir := range DIRECTIONS {
-		nx, ny := dir[0]+current[0], dir[1]+current[1]
-		next := [2]int{nx, ny}
+			moves := make([][2]int, 0, 4)
+			for _, dir := range DIRECTIONS {
+				nx, ny := dir[0]+current[0], dir[1]+current[1]
+				next := [2]int{nx, ny}
 
-		if b.InRange(next) && !visited[ny][nx] && currentValue >= b.GetValue(next) {
-			moves = append(moves, next)
+				if b.InRange(next) && b.grid[y][x] >= b.grid[ny][nx] {
+					moves = append(moves, next)
+				}
+			}
+
+			b.cache[current] = moves
 		}
 	}
-
-	return moves
 }
 
-func (b *Barrels) GetValue(coord [2]int) int {
-	return b.grid[coord[1]][coord[0]]
+func (b *Barrels) ValidMoves(current [2]int, visited [][]bool) [][2]int {
+	b.moves = b.moves[:0]
+
+	for _, next := range b.cache[current] {
+		if !visited[next[1]][next[0]] {
+			b.moves = append(b.moves, next)
+		}
+	}
+	return b.moves
 }
 
 // ========================
 // PART I & II
 // ========================
 
-func I(barrels Barrels, tracker Tracker, ignitionPoints [][2]int, maintain bool) int {
+func I(barrels Barrels, tracker *Tracker, ignitionPoints [][2]int, maintain bool) int {
 	queue := NewQueue[[2]int]()
 
 	for _, point := range ignitionPoints {
@@ -65,7 +76,7 @@ func I(barrels Barrels, tracker Tracker, ignitionPoints [][2]int, maintain bool)
 			continue
 		} else {
 			tracker.visited[y][x] = true
-			tracker.perRun = append(tracker.perRun, current)
+			tracker.temporary = append(tracker.temporary, current)
 			count++
 		}
 
@@ -75,7 +86,9 @@ func I(barrels Barrels, tracker Tracker, ignitionPoints [][2]int, maintain bool)
 	}
 
 	if !maintain {
-		tracker.RemoveCurrentRun()
+		tracker.ClearCurrentRun()
+	} else {
+		tracker.ClearTemporary()
 	}
 
 	return count
@@ -96,11 +109,13 @@ func III(barrels Barrels) int {
 
 		for y := 0; y < barrels.rows; y++ {
 			for x := 0; x < barrels.cols; x++ {
+
 				if tracker.visited[y][x] {
 					continue
 				}
 
-				count := I(barrels, *tracker, [][2]int{{x, y}}, false)
+				count := I(barrels, tracker, [][2]int{{x, y}}, false)
+
 				if count > maxCount {
 					maxCount = count
 					bestCoord = [2]int{x, y}
@@ -108,7 +123,7 @@ func III(barrels Barrels) int {
 			}
 		}
 
-		count += I(barrels, *tracker, [][2]int{bestCoord}, true)
+		count += I(barrels, tracker, [][2]int{bestCoord}, true)
 	}
 
 	return count
@@ -118,8 +133,8 @@ func III(barrels Barrels) int {
 // TRACKER
 // ========================
 type Tracker struct {
-	visited [][]bool
-	perRun  [][2]int
+	visited   [][]bool
+	temporary [][2]int
 }
 
 func NewTracker(rows, cols int) *Tracker {
@@ -128,16 +143,20 @@ func NewTracker(rows, cols int) *Tracker {
 		visited[y] = make([]bool, cols)
 	}
 	return &Tracker{
-		visited: visited,
-		perRun:  make([][2]int, 0, rows*cols),
+		visited:   visited,
+		temporary: make([][2]int, 0, rows*cols),
 	}
 }
 
-func (t *Tracker) RemoveCurrentRun() {
-	for _, d := range t.perRun {
+func (t *Tracker) ClearCurrentRun() {
+	for _, d := range t.temporary {
 		t.visited[d[1]][d[0]] = false
 	}
-	t.perRun = t.perRun[:0]
+	t.ClearTemporary()
+}
+
+func (t *Tracker) ClearTemporary() {
+	t.temporary = t.temporary[:0]
 }
 
 // ========================
@@ -151,15 +170,23 @@ func ParseInput(file string) Barrels {
 
 	for line := range strings.SplitSeq(data, "\n") {
 		row := make([]int, len(line))
-
 		for i, digit := range line {
 			row[i] = int(digit - '0')
 		}
-
 		grid = append(grid, row)
 	}
 
-	return Barrels{rows: len(grid), cols: len(grid[0]), grid: grid}
+	barrels := Barrels{
+		rows:  len(grid),
+		cols:  len(grid[0]),
+		grid:  grid,
+		cache: make(map[[2]int][][2]int),
+	}
+
+	//Cache possible moves
+	barrels.CacheMoves()
+
+	return barrels
 }
 
 // ========================
