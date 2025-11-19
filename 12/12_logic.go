@@ -10,46 +10,64 @@ import (
 // BARRELS
 // ========================
 
-type Barrels struct {
+type BarrelMap struct {
 	rows, cols int
 	grid       [][]int
-	cache      map[[2]int][][2]int
+	cache      [][][][2]int
 	moves      [][2]int
+}
+
+func NewBarrelMap(grid [][]int) BarrelMap {
+	rows := len(grid)
+	cols := len(grid[0])
+
+	cache := make([][][][2]int, rows)
+	for y := range rows {
+		cache[y] = make([][][2]int, cols)
+		for x := range cols {
+			cache[y][x] = make([][2]int, 0, 4)
+		}
+	}
+
+	barrels := BarrelMap{
+		rows:  rows,
+		cols:  cols,
+		grid:  grid,
+		cache: cache,
+		moves: [][2]int{},
+	}
+
+	barrels.CacheMoves()
+
+	return barrels
 }
 
 var DIRECTIONS = [][2]int{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
 
-func (b *Barrels) InRange(coord [2]int) bool {
-	x, y := coord[0], coord[1]
-	return x >= 0 && x < b.cols && y >= 0 && y < b.rows
-}
-
-func (b *Barrels) CacheMoves() {
+func (b *BarrelMap) CacheMoves() {
 	for y := 0; y < b.rows; y++ {
 		for x := 0; x < b.cols; x++ {
 			current := [2]int{x, y}
 
-			moves := make([][2]int, 0, 4)
 			for _, dir := range DIRECTIONS {
 				nx, ny := dir[0]+current[0], dir[1]+current[1]
 				next := [2]int{nx, ny}
 
-				if b.InRange(next) && b.grid[y][x] >= b.grid[ny][nx] {
-					moves = append(moves, next)
+				if nx >= 0 && nx < b.cols && ny >= 0 && ny < b.rows && b.grid[y][x] >= b.grid[ny][nx] {
+					b.cache[y][x] = append(b.cache[y][x], next)
 				}
 			}
-
-			b.cache[current] = moves
 		}
 	}
 }
 
-func (b *Barrels) ValidMoves(current [2]int, visited [][]bool) [][2]int {
+func (b *BarrelMap) ValidMoves(current [2]int, visited [][]bool) [][2]int {
+	x, y := current[0], current[1]
 	b.moves = b.moves[:0]
 
-	for _, next := range b.cache[current] {
-		if !visited[next[1]][next[0]] {
-			b.moves = append(b.moves, next)
+	for _, move := range b.cache[y][x] {
+		if !visited[move[1]][move[0]] {
+			b.moves = append(b.moves, move)
 		}
 	}
 	return b.moves
@@ -59,7 +77,7 @@ func (b *Barrels) ValidMoves(current [2]int, visited [][]bool) [][2]int {
 // PART I & II
 // ========================
 
-func I(barrels Barrels, tracker *Tracker, ignitionPoints [][2]int, maintain bool) int {
+func I(barrels BarrelMap, tracker *Tracker, ignitionPoints [][2]int, maintain bool) int {
 	queue := NewQueue[[2]int]()
 
 	for _, point := range ignitionPoints {
@@ -98,7 +116,7 @@ func I(barrels Barrels, tracker *Tracker, ignitionPoints [][2]int, maintain bool
 // PART III
 // ========================
 
-func III(barrels Barrels) int {
+func III(barrels BarrelMap) int {
 	tracker := NewTracker(barrels.rows, barrels.cols)
 
 	count := 0
@@ -163,7 +181,7 @@ func (t *Tracker) ClearTemporary() {
 // PARSER
 // ========================
 
-func ParseInput(file string) Barrels {
+func ParseInput(file string) BarrelMap {
 	data := utils.ReadFile(file)
 
 	var grid [][]int
@@ -175,18 +193,7 @@ func ParseInput(file string) Barrels {
 		}
 		grid = append(grid, row)
 	}
-
-	barrels := Barrels{
-		rows:  len(grid),
-		cols:  len(grid[0]),
-		grid:  grid,
-		cache: make(map[[2]int][][2]int),
-	}
-
-	//Cache possible moves
-	barrels.CacheMoves()
-
-	return barrels
+	return NewBarrelMap(grid)
 }
 
 // ========================
