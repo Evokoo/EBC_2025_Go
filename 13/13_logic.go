@@ -34,7 +34,7 @@ func I(file string, rotations int) int {
 }
 
 // ========================
-// PART II
+// PART II & III
 // ========================
 type Section struct {
 	start, end, length, step int
@@ -73,7 +73,6 @@ func II(file string, rotations int) int {
 	for _, section := range dial {
 		if target >= current && target < current+section.length {
 			for i := section.start; i != section.end; i += section.step {
-
 				if current == target {
 					return i
 				}
