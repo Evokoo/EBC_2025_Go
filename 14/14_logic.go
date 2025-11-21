@@ -131,8 +131,9 @@ func I(tiles Tiles, rounds int) int {
 // ========================
 // PART III
 // ========================
-func III(tiles Tiles, rounds int) {
-	cycle := make(map[int]int)
+func III(tiles Tiles, rounds int) int {
+	seen := make(map[int]struct{})
+	cycles := make([][2]int, 0)
 	total := 0
 
 	for round := range rounds {
@@ -149,17 +150,59 @@ func III(tiles Tiles, rounds int) {
 
 		if tiles.HasPattern() {
 			count := tiles.CountActive()
+			cycles = append(cycles, [2]int{count, round})
 
-			if _, found := cycle[count]; found {
-				fmt.Println(round, total)
-				panic("Found?")
+			if _, found := seen[count]; found {
+				return PredictCumulative(cycles, rounds)
 			}
 
-			cycle[count] = total
+			seen[count] = struct{}{}
 			total += count
 		}
 	}
 
+	return 0
+}
+
+func PredictCumulative(cycles [][2]int, round int) int {
+	var cycleLength int
+
+	for _, c := range cycles[1:] {
+		cycleLength++
+		if c[0] == cycles[0][0] {
+			break
+		}
+	}
+
+	c1 := cycles[:cycleLength]
+
+	fullCycleRounds := cycles[cycleLength][1] - c1[0][1]
+	roundsToCover := round - c1[0][1]
+	fullCycles := roundsToCover / fullCycleRounds
+
+	totalTiles := fullCycles * SumCycle(c1)
+	remainderRounds := roundsToCover % fullCycleRounds
+
+	for _, step := range c1 {
+		recordedRoundInCycle := step[1]
+		tileCount := step[0]
+
+		if recordedRoundInCycle <= remainderRounds {
+			totalTiles += tileCount
+		} else {
+			break
+		}
+	}
+
+	return totalTiles
+}
+
+func SumCycle(cycle [][2]int) int {
+	sum := 0
+	for _, c := range cycle {
+		sum += c[0]
+	}
+	return sum
 }
 
 // ========================
@@ -186,7 +229,6 @@ func ParseInput(file string) Tiles {
 	}
 
 	updates := make(Queue[[2]int], 0, rows*cols)
-
 	return Tiles{grid: grid, updates: updates, rows: rows, cols: cols}
 }
 
