@@ -1,7 +1,6 @@
 package quest15
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -58,36 +57,6 @@ func NewTunnel(moves [][2]int) Tunnel {
 }
 func (t Tunnel) InRange(coord [2]int) bool {
 	return coord[0] >= t.width[0] && coord[0] < t.width[1] && coord[1] >= t.height[0] && coord[1] < t.height[1]
-}
-func (t Tunnel) DrawTunnel() {
-	cols := t.width[1] - t.width[0] + 1
-	rows := t.height[1] - t.height[0] + 1
-
-	var grid [][]string
-	for y := 0; y < rows; y++ {
-		grid = append(grid, make([]string, cols))
-		for x := 0; x < cols; x++ {
-			grid[y][x] = "."
-		}
-	}
-
-	for wall := range t.walls {
-		x, y := wall[0], wall[1]
-		grid[y-t.height[0]][x-t.width[0]] = "#"
-	}
-
-	grid[t.start[1]-t.height[0]][t.start[0]-t.width[0]] = "S"
-	grid[t.end[1]-t.height[0]][t.end[0]-t.width[0]] = "E"
-
-	for y := range grid {
-		var row strings.Builder
-		for x := range grid[y] {
-			row.WriteString(grid[y][x])
-		}
-		fmt.Println(row.String())
-	}
-
-	fmt.Println()
 }
 
 // ========================

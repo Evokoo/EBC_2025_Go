@@ -8,6 +8,8 @@ func Solve(file string, part int) int {
 		return I(tunnel)
 	case 2:
 		return I(tunnel)
+	case 3:
+		// return I(tunnel)
 	}
 	return 0
 }
