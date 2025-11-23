@@ -15,6 +15,9 @@ import (
 // ========================
 type Layer [3]int
 
+func NewLayer(value int) Layer {
+	return Layer{-1, value, -1}
+}
 func (l *Layer) GetQuality() int {
 	var digits strings.Builder
 
@@ -33,13 +36,9 @@ func (l *Layer) GetQuality() int {
 // ========================
 type FishBone []Layer
 
-func NewLayer(value int) Layer {
-	return Layer{-1, value, -1}
-}
 func NewFishBone(value int) FishBone {
 	return FishBone{NewLayer(value)}
 }
-
 func (s *FishBone) AddLayer(value int) {
 	(*s) = append((*s), NewLayer(value))
 }
@@ -91,7 +90,6 @@ func II(lists [][]int) int {
 
 	for _, list := range lists {
 		quality, _ := I(list)
-
 		best = max(quality, best)
 		worst = min(quality, worst)
 	}
