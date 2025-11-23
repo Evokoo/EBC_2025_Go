@@ -27,7 +27,7 @@ var _ = Describe("EBC 2025 - Quest 15", func() {
 	for _, test := range tests {
 		msg := fmt.Sprintf("Testing Part %d with %s", test.part, test.file)
 		It(msg, func() {
-			result := Solve(test.file, test.part)
+			result := Solve(test.file)
 			Expect(result).To(Equal((test.target)))
 		})
 	}
