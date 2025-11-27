@@ -17,10 +17,10 @@ type Test struct {
 var tests = []Test{
 	{part: 1, file: "inputs/example_I.txt", target: 774},
 	{part: 1, file: "inputs/input_I.txt", target: 2004458},
-	// {part: 2, file: "inputs/example_II.txt", target: -1},
-	// {part: 2, file: "inputs/input_II.txt", target: -1},
-	// {part: 3, file: "inputs/example_III.txt", target: -1},
-	// {part: 3, file: "inputs/input_III.txt", target: -1},
+	{part: 2, file: "inputs/example_II.txt", target: 324},
+	{part: 2, file: "inputs/input_II.txt", target: 14069778048},
+	{part: 3, file: "inputs/example_III.txt", target: 946},
+	{part: 3, file: "inputs/input_III.txt", target: 288433},
 }
 
 var _ = Describe("EBC 2025 - Quest 18", func() {

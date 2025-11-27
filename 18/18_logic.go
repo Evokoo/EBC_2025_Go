@@ -1,7 +1,6 @@
 package quest18
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -9,7 +8,7 @@ import (
 )
 
 // ========================
-// PLANT, BRANCH & TREE
+// PLANT, CHILD & TREE
 // ========================
 type Plant struct {
 	id, weight int
@@ -57,79 +56,178 @@ func (t Tree) ConnectPlants(a, b, weight int) {
 }
 
 // ========================
-// PART I
+// ENERGY CALCULATOR
 // ========================
 
-func I(tree Tree) int {
-	queue := make([]*Plant, 0)
-	store := make(map[int]int)        // total incoming energy for each plant
-	readyParents := make(map[int]int) // number of parents processed per plant
+func Calculate(tree Tree, configuration []int) int {
+	queue, store := QueueAndStore(tree, configuration)
+	targetID := len(tree)
+	parentsProcessed := make(map[int]int)
 
-	// Initialize entry nodes
-	for _, plant := range tree {
-		if len(plant.parents) == 0 {
-			queue = append(queue, plant)
-			store[plant.id] = 1 // free branch energy
-		}
-	}
-
-	// BFS / topological processing
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-
+	for !queue.IsEmpty() {
+		current := queue.Pop()
 		incoming := store[current.id]
 
-		// Threshold: if energy < thickness, plant dies, propagate 0
-		var energy int
-		if incoming < current.weight {
-			energy = 0
-		} else {
+		energy := 0
+		if incoming >= current.weight {
 			energy = incoming
 		}
 
-		// Propagate to children
 		for _, childBranch := range current.children {
 			child := childBranch.plant
 			outgoing := energy * childBranch.weight
 			store[child.id] += outgoing
 
-			// track processed parents
-			readyParents[child.id]++
-			if readyParents[child.id] == len(child.parents) {
-				queue = append(queue, child)
+			parentsProcessed[child.id]++
+			if parentsProcessed[child.id] == len(child.parents) {
+				queue.Push(child)
 			}
 		}
 	}
 
-	fmt.Println("Energy per plant:", store)
+	result := store[targetID]
+	if result < tree.GetPlant(targetID).weight {
+		return 0
+	}
 
-	// If there is a single final plant (no children), return its energy
+	return result
+}
+func QueueAndStore(tree Tree, configuration []int) (Queue[*Plant], map[int]int) {
+	queue := make(Queue[*Plant], 0)
+	store := make(map[int]int)
+
 	for _, plant := range tree {
-		if len(plant.children) == 0 {
-			return store[plant.id]
+		if len(plant.parents) == 0 {
+			queue = append(queue, plant)
+			store[plant.id] = configuration[plant.id-1]
 		}
 	}
 
-	return 0
+	return queue, store
+}
+
+// ========================
+// PART I
+// ========================
+
+func I(tree Tree) int {
+	configuration := make([]int, 0, len(tree))
+
+	for _, plant := range tree {
+		if len(plant.parents) == 0 {
+			configuration = append(configuration, 1)
+		}
+	}
+
+	return Calculate(tree, configuration)
+}
+
+// ========================
+// PART II
+// ========================
+
+func II(tree Tree, configurations [][]int) int {
+	total := 0
+
+	for _, configuration := range configurations {
+		total += Calculate(tree, configuration)
+	}
+
+	return total
+}
+
+// ========================
+// PART III
+// ========================
+
+func III(tree Tree, configurations [][]int) int {
+	optimal := Calculate(tree, FindOptimalConfiguration(tree, len(configurations[0])))
+
+	totalDifference := 0
+	for _, config := range configurations {
+		result := Calculate(tree, config)
+
+		if result > 0 {
+			totalDifference += optimal - result
+		}
+	}
+	return totalDifference
+}
+
+func FindOptimalConfiguration(tree Tree, length int) []int {
+	optimalConfiguration := make([]int, length)
+
+	for id, plant := range tree {
+		if len(plant.parents) == 0 {
+			flipBit := true
+
+			for _, child := range plant.children {
+				if child.weight < 0 {
+					flipBit = false
+					break
+				}
+			}
+
+			if flipBit {
+				optimalConfiguration[id-1] = 1
+			}
+		}
+	}
+
+	improved := true
+	for improved {
+
+		improved = false
+		currentResult := Calculate(tree, optimalConfiguration)
+
+		for i := range len(optimalConfiguration) {
+			newConfig := make([]int, len(optimalConfiguration))
+			copy(newConfig, optimalConfiguration)
+
+			newConfig[i] = 1 - newConfig[i]
+			newResult := Calculate(tree, newConfig)
+
+			if newResult > currentResult {
+				optimalConfiguration[i] = newConfig[i]
+				improved = true
+				currentResult = newResult
+			}
+		}
+	}
+
+	return optimalConfiguration
 }
 
 // ========================
 // PARSER
 // ========================
 
-func ParseInput(file string) Tree {
+func ParseInput(file string) (Tree, [][]int) {
 	data := utils.ReadFile(file)
 	sections := strings.Split(data, "\n\n")
 
 	tree := make(Tree, len(sections))
 	connections := [][3]int{}
+	activity := make([][]int, 0)
 
 	for _, section := range sections {
 		var id, weight int
 
+		if !strings.HasPrefix(section, "P") {
+			for _, line := range strings.Split(section, "\n") {
+				row := make([]int, 0)
+
+				for _, value := range strings.Split(line, " ") {
+					n, _ := strconv.Atoi(value)
+					row = append(row, n)
+				}
+				activity = append(activity, row)
+			}
+			continue
+		}
+
 		for i, line := range strings.Split(section, "\n") {
-			values := utils.QuickMatch(line, `\d+`)
+			values := utils.QuickMatch(line, `-*\d+`)
 
 			if i == 0 {
 				a, _ := strconv.Atoi(values[0])
@@ -152,7 +250,7 @@ func ParseInput(file string) Tree {
 		tree.ConnectPlants(a, b, weight)
 	}
 
-	return tree
+	return tree, activity
 }
 
 // ========================
