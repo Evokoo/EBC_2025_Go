@@ -11,16 +11,21 @@ import (
 // COURSE
 // ========================
 type Course struct {
-	gaps map[int][2]int // x, [yMin, yMax]
+	gaps map[int][][2]int // x, [yMin, yMax]
 	exit int
 }
 
-func (c Course) IsWall(x, y int) bool {
-	if yRange, found := c.gaps[x]; found {
-		return y < yRange[0] || y > yRange[1]
+func (c Course) IsFreeSpace(x, y int) bool {
+	if gaps, found := c.gaps[x]; found {
+		for _, yRange := range gaps {
+			if y >= yRange[0] && y <= yRange[1] {
+				return true
+			}
+		}
+		return false
 	}
 
-	return false
+	return true
 }
 
 // ========================
@@ -29,42 +34,64 @@ func (c Course) IsWall(x, y int) bool {
 
 var MOVES = [][3]int{{1, 1, 1}, {1, -1, 0}}
 
-type Bird struct{ x, y, flaps int }
-
-func QueueSorter(a, b Bird) bool {
-	return a.flaps < b.flaps
+func QueueSorter(a, b [3]int) bool {
+	return a[2] < b[2]
 }
 
 func I(course Course) int {
 	queue := utils.NewPriorityQueue(QueueSorter)
-	queue.PushItem(Bird{x: 0, y: 0, flaps: 0})
+	queue.PushItem([3]int{0, 0, 0})
 
 	visited := make(map[[2]int]int)
 
 	for !queue.IsEmpty() {
 		bird := queue.PopItem()
-		key := [2]int{bird.x, bird.y}
+		key := [2]int{bird[0], bird[1]}
 
-		if previous, found := visited[key]; found && previous <= bird.flaps {
+		if previous, found := visited[key]; found && previous <= bird[2] {
 			continue
 		} else {
-			visited[key] = bird.flaps
+			visited[key] = bird[2]
 		}
 
-		if bird.x == course.exit {
-			return bird.flaps
+		if bird[0] == course.exit {
+			return bird[2]
 		}
 
 		for _, move := range MOVES {
-			nx, ny, nf := move[0]+bird.x, move[1]+bird.y, move[2]+bird.flaps
+			nx, ny, nf := move[0]+bird[0], move[1]+bird[1], move[2]+bird[2]
 
-			if !course.IsWall(nx, ny) {
-				queue.PushItem(Bird{x: nx, y: ny, flaps: nf})
+			if course.IsFreeSpace(nx, ny) {
+				queue.PushItem([3]int{nx, ny, nf})
 			}
 		}
 	}
 
 	return 0
+}
+
+// ========================
+// PART III
+// ========================
+
+// Base on maneatingape's solution
+// https://github.com/maneatingape/everybody-codes-rust/blob/main/src/event2025/quest19.rs
+
+func III(file string) int {
+	x, f := 0, 0
+
+	for line := range strings.SplitSeq(utils.ReadFile(file), "\n") {
+		value := strings.Split(line, ",")
+		x1, _ := strconv.Atoi(value[0])
+		y1, _ := strconv.Atoi(value[1])
+
+		if x < x1 {
+			x = x1
+			f = max(f, (x1+y1+1)/2)
+		}
+	}
+
+	return f
 }
 
 // ========================
@@ -74,7 +101,7 @@ func I(course Course) int {
 func ParseInput(file string) Course {
 	data := utils.ReadFile(file)
 
-	gaps := make(map[int][2]int, 0)
+	gaps := make(map[int][][2]int, 0)
 	exit := 0
 
 	for line := range strings.SplitSeq(data, "\n") {
@@ -83,26 +110,15 @@ func ParseInput(file string) Course {
 		y1, _ := strconv.Atoi(value[1])
 		y2, _ := strconv.Atoi(value[2])
 
-		gaps[x] = [2]int{y1, y1 + y2}
+		if array, found := gaps[x]; found {
+			array = append(array, [2]int{y1, y1 + y2})
+			gaps[x] = array
+		} else {
+			gaps[x] = [][2]int{{y1, y1 + y2}}
+		}
+
 		exit = x
 	}
 
 	return Course{gaps: gaps, exit: exit}
-}
-
-// ========================
-// QUEUE
-// ========================
-type Queue[T comparable] []T
-
-func (q *Queue[T]) Pop() T {
-	popped := (*q)[0]
-	(*q) = (*q)[1:]
-	return popped
-}
-func (q *Queue[T]) Push(value T) {
-	(*q) = append((*q), value)
-}
-func (q *Queue[T]) IsEmpty() bool {
-	return len(*q) == 0
 }
