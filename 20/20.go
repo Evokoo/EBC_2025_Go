@@ -8,6 +8,8 @@ func Solve(file string, part int) int {
 		return I(trampolines)
 	case 2:
 		return II(trampolines)
+	case 3:
+		return III(trampolines)
 	}
 	return 0
 }

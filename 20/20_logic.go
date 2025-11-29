@@ -20,40 +20,85 @@ func GetMoveSet(x, y int) [][2]int {
 }
 
 // ========================
-// GRID
+// TRAMPOLINES
 // ========================
 type Trampolines struct {
 	start, exit   [2]int
-	grid          [][]rune
+	grids         map[int][][]rune
 	width, height int
 }
 
 func (t Trampolines) InRange(x, y int) bool {
 	return x >= 0 && x < t.width && y >= 0 && y < t.height
 }
-func (t Trampolines) ValidJumps(x, y int) [][2]int {
-	jumps := make([][2]int, 0, 3)
+
+func (t Trampolines) ValidJumps(x, y, r int, neutral bool) [][2]int {
+	grid := t.grids[r]
+	jumps := make([][2]int, 0, 4)
+
+	if neutral && (grid[y][x] == 'T' || grid[y][x] == 'E' || grid[y][x] == 'S') {
+		jumps = append(jumps, [2]int{x, y})
+	}
+
 	for _, jump := range GetMoveSet(x, y) {
 		nx, ny := x+jump[0], y+jump[1]
-
-		if t.InRange(nx, ny) && (t.grid[ny][nx] == 'T' || t.grid[ny][nx] == 'E' || t.grid[ny][nx] == 'S') {
+		if t.InRange(nx, ny) && (grid[ny][nx] == 'T' || grid[ny][nx] == 'E' || grid[ny][nx] == 'S') {
 			jumps = append(jumps, [2]int{nx, ny})
 		}
 	}
+
 	return jumps
+}
+
+func (t *Trampolines) ComputeRotations() {
+	for i := 0; i < 2; i++ {
+		current := t.grids[i]
+		rotation := make([][]rune, t.height)
+		for y := 0; y < t.height; y++ {
+			rotation[y] = make([]rune, t.width)
+			copy(rotation[y], current[y])
+		}
+
+		for y := 0; y < t.height; y++ {
+			cx, cy := t.start[0]+y, t.start[1]-y
+			px, py := y, y
+
+			for x := 0; x < t.width-(y*2); x++ {
+				rotation[py][px] = current[cy][cx]
+
+				if x%2 == 0 {
+					cy--
+				} else {
+					cx--
+				}
+				px++
+			}
+		}
+		t.grids[i+1] = rotation
+	}
+}
+
+// ========================
+// STATE
+// ========================
+type State struct {
+	pos      [2]int
+	steps    int
+	rotation int
 }
 
 // ========================
 // PART I
 // ========================
 func I(trampolines Trampolines) int {
+	grid := trampolines.grids[0]
 	seen := make(Set[[2]int])
 	count := 0
 
 	for y := 0; y < trampolines.height; y++ {
 		for x := 0; x < trampolines.width; x++ {
-			if trampolines.grid[y][x] == 'T' {
-				for _, jump := range trampolines.ValidJumps(x, y) {
+			if grid[y][x] == 'T' {
+				for _, jump := range trampolines.ValidJumps(x, y, 0, false) {
 					if !seen.Has(jump) {
 						count++
 					}
@@ -68,14 +113,10 @@ func I(trampolines Trampolines) int {
 // ========================
 // PART II
 // ========================
-type State struct {
-	position [2]int
-	steps    int
-}
 
 func II(trampolines Trampolines) int {
 	queue := make(Queue[State], 0)
-	queue.Push(State{trampolines.start, 0})
+	queue.Push(State{trampolines.start, 0, 0})
 
 	seen := make(Set[[2]int])
 	seen.Add(trampolines.start)
@@ -83,15 +124,51 @@ func II(trampolines Trampolines) int {
 	for !queue.IsEmpty() {
 		current := queue.Pop()
 
-		if current.position == trampolines.exit {
+		if current.pos == trampolines.exit {
 			return current.steps
 		}
 
-		for _, jump := range trampolines.ValidJumps(current.position[0], current.position[1]) {
+		for _, jump := range trampolines.ValidJumps(current.pos[0], current.pos[1], 0, false) {
 			if !seen.Has(jump) {
-				queue.Push(State{jump, current.steps + 1})
+				queue.Push(State{jump, current.steps + 1, 0})
 				seen.Add(jump)
 			}
+		}
+	}
+
+	return 0
+}
+
+// ========================
+// PART III
+// ========================
+
+func III(t Trampolines) int {
+	//Compute rotations
+	t.ComputeRotations()
+
+	queue := make(Queue[State], 0)
+	queue.Push(State{t.start, 0, 0})
+
+	seen := make(Set[[3]int])
+
+	for !queue.IsEmpty() {
+		current := queue.Pop()
+		key := [3]int{current.pos[0], current.pos[1], current.rotation}
+		rotation := (current.rotation + 1) % 3
+
+		if current.pos == t.exit {
+			return current.steps
+		}
+
+		if seen.Has(key) {
+			continue
+		} else {
+			seen.Add(key)
+		}
+
+		for _, jump := range t.ValidJumps(current.pos[0], current.pos[1], rotation, true) {
+			queue.Push(State{jump, current.steps + 1, rotation})
 		}
 	}
 
@@ -124,8 +201,11 @@ func ParseInput(file string) Trampolines {
 		grid = append(grid, row)
 	}
 
+	grids := make(map[int][][]rune, 3)
+	grids[0] = grid
+
 	return Trampolines{
-		grid:   grid,
+		grids:  grids,
 		start:  start,
 		exit:   exit,
 		height: len(grid),
