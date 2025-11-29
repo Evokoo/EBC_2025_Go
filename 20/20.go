@@ -6,6 +6,8 @@ func Solve(file string, part int) int {
 	switch part {
 	case 1:
 		return I(trampolines)
+	case 2:
+		return II(trampolines)
 	}
 	return 0
 }
